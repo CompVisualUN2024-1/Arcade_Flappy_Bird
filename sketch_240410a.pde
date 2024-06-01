@@ -4,45 +4,75 @@ int gap, tubeWidth, tubeSpeed;
 int tubeX, topTubeHeight, bottomTubeHeight;
 boolean gameover;
 int score;
+int highScore = 0;
+
+PImage birdImg;
+PImage topTubeImg, bottomTubeImg;
+PImage backgroundImg;
+boolean paused = false;
 
 void setup() {
-  // Configuración inicial del lienzo de juego.
   size(400, 600);
-  // Iniciar el juego.
+
+  // Cargar las imágenes (asegúrate de tener los archivos de imagen en la misma carpeta que tu sketch).
+  birdImg = loadImage("bird.png"); // Carga la imagen del pájaro.
+  topTubeImg = loadImage("top_tube.png"); // Carga la imagen del tubo superior.
+  bottomTubeImg = loadImage("bottom_tube.png"); // Carga la imagen del tubo inferior.
+  backgroundImg = loadImage("background.jpeg"); // Carga la imagen del fondo.
+
+  // Verificar si las imágenes se cargaron correctamente.
+  if (birdImg == null || topTubeImg == null || bottomTubeImg == null || backgroundImg == null) {
+    println("Error: No se pudo cargar alguna imagen. Se utilizarán figuras básicas.");
+  }
+
   startGame();
 }
 
 void draw() {
-  // Fondo del lienzo.
-  background(0);
-  
-  // Si el juego no ha terminado, actualiza y dibuja el juego.
-  if (!gameover) {
+  // Fondo del lienzo con imagen.
+  if (backgroundImg != null) {
+    drawBackground();
+  } else {
+    background(0);
+  }
+
+  if (!gameover &&!paused) {
     moveBird();
     moveTubes();
     checkCollisions();
-    drawBird();
-    drawTubes();
+    if (birdImg != null) {
+      drawBird();
+    } else {
+      drawDefaultBird();
+    }
+    if (topTubeImg != null && bottomTubeImg != null) {
+      drawTubes();
+    } else {
+      drawDefaultTubes();
+    }
     drawScore();
-  } else { // Si el juego ha terminado, muestra el mensaje de Game Over.
+  } else if (paused) {
+    fill(255);
+    textSize(32);
+    text("Pausa", width / 2 - 50, height / 2);
+  } else {
     displayGameOver();
   }
 }
 
-// Función para manejar las teclas presionadas.
 void keyPressed() {
-  // Si el juego ha terminado y se presiona la flecha hacia arriba, reinicia el juego.
   if (keyCode == UP && gameover) {
     startGame();
-  } else if (keyCode == ' ' && !gameover) { // Si se presiona la barra espaciadora y el juego no ha terminado, el pájaro salta.
+  } else if (keyCode == ' ' && !gameover &&!paused) {
     birdSpeed = -15;
+    // jumpSound.play(); // Reproducir sonido de salto.
+  } else if (key == 'p' || key == 'P') {
+    paused =!paused; // Toggle pausa
   }
 }
 
-// Función para iniciar el juego.
 void startGame() {
-  // Configuración inicial de todas las variables del juego.
-  birdY = height/2;
+  birdY = height / 2;
   birdSpeed = 0;
   gravity = 1;
   gap = 200;
@@ -55,60 +85,72 @@ void startGame() {
   score = 0;
 }
 
-// Función para mover al pájaro.
 void moveBird() {
   birdSpeed += gravity;
   birdY += birdSpeed;
 }
 
-// Función para dibujar al pájaro.
 void drawBird() {
-  fill(255, 255, 0);
-  ellipse(100, birdY, 50, 50);
+  image(birdImg, 75, birdY, 100, 100); // Dibuja la imagen del pájaro.
 }
 
-// Función para mover los tubos.
+void drawDefaultBird() {
+  fill(255, 255, 0);
+  ellipse(100, birdY, 50, 50); // Dibuja una elipse como pájaro por defecto.
+}
+
 void moveTubes() {
   tubeX -= tubeSpeed;
-  // Si un tubo sale del lienzo, se genera un nuevo conjunto de tubos y se incrementa el puntaje.
   if (tubeX < -tubeWidth) {
     tubeX = width;
     topTubeHeight = int(random(50, height - gap - 50));
     bottomTubeHeight = height - topTubeHeight - gap;
     score++;
+    // pointSound.play(); // Reproducir sonido de punto.
+  }
+  if (score % 2 == 0 && score != 0) {
+    tubeSpeed += 0.1;
   }
 }
 
-// Función para dibujar los tubos.
 void drawTubes() {
+  image(topTubeImg, tubeX, 0, tubeWidth, topTubeHeight+30); // Dibuja el tubo superior.
+  image(bottomTubeImg, tubeX, height - bottomTubeHeight, tubeWidth, bottomTubeHeight+30); // Dibuja el tubo inferior.
+}
+
+void drawDefaultTubes() {
   fill(0, 255, 0);
   rect(tubeX, 0, tubeWidth, topTubeHeight);
   rect(tubeX, height - bottomTubeHeight, tubeWidth, bottomTubeHeight);
 }
 
-// Función para verificar colisiones.
 void checkCollisions() {
-  // Si el pájaro colisiona con los límites del lienzo o con los tubos, el juego termina.
   if (birdY < 0 || birdY > height || 
       (100 + 25 > tubeX && 100 - 25 < tubeX + tubeWidth && 
        (birdY - 25 < topTubeHeight || birdY + 25 > height - bottomTubeHeight))) {
     gameover = true;
+    // hitSound.play(); // Reproducir sonido de choque.
+    if (score > highScore) {
+      highScore = score;
+    }
   }
 }
 
-// Función para dibujar el puntaje en la pantalla.
 void drawScore() {
   fill(255);
   textSize(32);
-  text(score, width/2, 50);
+  text(score, width / 2, 50);
 }
 
-// Función para mostrar el mensaje de Game Over.
+void drawBackground() {
+  image(backgroundImg, 0, 0, width, height); // Dibuja la imagen del fondo.
+}
+
 void displayGameOver() {
   fill(255);
   textSize(32);
-  text("Game Over", width/2 - 100, height/2);
-  text("Score: " + score, width/2 - 80, height/2 + 50);
-  text("Presiona flecha arriba para reiniciar", width/2 - 200, height/2 + 100);
+  text("Game Over", width / 2 - 100, height / 2);
+  text("Score: " + score, width / 2 - 80, height / 2 + 50);
+  text("High Score: " + highScore, width / 2 - 100, height / 2 + 100); // Mostrar el mejor puntaje.
+  text("Presiona flecha arriba para reiniciar", width / 2 - 200, height / 2 + 150);
 }
-   
